@@ -44,23 +44,50 @@ def main_menu():
     btn_limit = types.KeyboardButton(f"🔢 Лимит: {user_settings['limit']} ст.")
     btn_source = types.KeyboardButton(f"📡 База: {user_settings['source']}")
     btn_report = types.KeyboardButton("🚀 ПОЛУЧИТЬ ОТЧЕТ")
+    btn_report = types.KeyboardButton("🚀 ПОЛУЧИТЬ ОТЧЕТ")
+    btn_reset = types.KeyboardButton("🔄 СБРОС") # Добавили кнопку
     
     markup.add(btn_topic, btn_keys)
     markup.add(btn_days, btn_limit)
     markup.add(btn_source, btn_report)
+    markup.add(btn_reset)
     return markup
 
 # --- Инлайновые меню выбора ---
 def topic_menu():
-    markup = types.InlineKeyboardMarkup(row_width=1)
+    # row_width=2 сделает кнопки компактнее (в два столбика)
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    
+    # Полный актуальный список категорий Physics с arXiv
     physics_cats = {
-        "physics.optics": "Оптика / Лазеры",
-        "physics.plasm-ph": "Физика плазмы",
+        "physics.optics": "Оптика",
+        "physics.plasm-ph": "Плазма",
         "physics.gen-ph": "Общая физика",
-        "custom": "⌨️ Ввести код вручную"
+        "physics.acc-ph": "Ускорители",
+        "physics.ao-ph": "Атмосфера/Океан",
+        "physics.app-ph": "Прикладная",
+        "physics.atm-clus": "Атомы/Кластеры",
+        "physics.bio-ph": "Биофизика",
+        "physics.chem-ph": "Хим. физика",
+        "physics.comp-ph": "Выч. физика",
+        "physics.data-an": "Анализ данных",
+        "physics.flu-dyn": "Гидродинамика",
+        "physics.geo-ph": "Геофизика",
+        "physics.hist-ph": "История/Образов.",
+        "physics.ins-det": "Приборы/Детект.",
+        "physics.med-ph": "Мед. физика",
+        "physics.soc-ph": "Соц. физика",
+        "physics.pop-ph": "Попул. физика",
+        "custom": "⌨️ Свой код"
     }
+    
+    # Создаем список кнопок
+    buttons = []
     for code, name in physics_cats.items():
-        markup.add(types.InlineKeyboardButton(name, callback_data=f"set_topic_{code}"))
+        buttons.append(types.InlineKeyboardButton(name, callback_data=f"set_topic_{code}"))
+    
+    # Добавляем все кнопки в разметку
+    markup.add(*buttons)
     return markup
 
 # --- Вспомогательный поиск Semantic Scholar ---
@@ -165,7 +192,17 @@ def run_report(message):
                     'date': r.published.strftime('%Y-%m-%d')
                 })
         except: pass
-
+@bot.message_handler(func=lambda m: m.text == "🔄 СБРОС")
+def h_reset(m):
+    global user_settings
+    user_settings = {
+        'topic': 'physics.optics',
+        'keywords': ['laser', 'plasma'],
+        'days': 7,
+        'limit': 5,
+        'source': 'Both' 
+    }
+    bot.send_message(m.chat.id, "✅ Настройки сброшены до стандартных.", reply_markup=main_menu())
     # Поиск Semantic Scholar
     if user_settings['source'] in ['Semantic', 'Both']:
         sem_res = search_semantic_scholar(q_str, user_settings['limit'])
