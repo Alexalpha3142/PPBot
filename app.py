@@ -106,7 +106,7 @@ def ask_keys(m):
     bot.register_next_step_handler(msg, save_keys)
 
 def save_keys(m):
-    user_settings['keywords'] = if m.text else []
+    user_settings['keywords'] = m.text.split(",") if m.text else []
     bot.send_message(m.chat.id, "✅ Ключи обновлены", reply_markup=main_menu())
 
 @bot.callback_query_handler(func=lambda call: True)
