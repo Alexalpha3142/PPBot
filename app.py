@@ -211,21 +211,25 @@ def keep_alive():
 
 # --- СЕКЦИЯ ЗАПУСКА ДЛЯ RENDER ---
 
+import time
+
+# --- ФИНАЛЬНЫЙ БЛОК ЗАПУСКА ДЛЯ RENDER ---
+
 def run():
-    # Эта строка должна иметь отступ 4 пробела!
+    # Render требует, чтобы сервер слушал порт
     port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+    # Запускаем Flask в отдельном потоке
+    t = Thread(target=lambda: app.run(host='0.0.0.0', port=port, use_reloader=False))
+    t.daemon = True
+    t.start()
 
 if __name__ == "__main__":
-    # Все строки ниже ДОЛЖНЫ иметь отступ в 4 пробела!
-    server_thread = Thread(target=run)
-    server_thread.daemon = True
-    server_thread.start()
+    run() # Сначала открываем порт для Render
     
-    import time
-    time.sleep(2)
-    
-    print("Бот запускается...")
-    # Очищаем старые сессии, чтобы не было ошибки 409 Conflict
+    print("Очистка вебхуков...")
     bot.remove_webhook()
+    time.sleep(1)
+    
+    print("Бот запущен и готов к работе!")
+    # Бесконечный цикл опроса
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
