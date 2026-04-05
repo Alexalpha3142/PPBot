@@ -53,13 +53,30 @@ def main_menu():
 
 def topic_menu():
     markup = types.InlineKeyboardMarkup(row_width=2)
-    physics_cats = {
-        "physics.optics": "Оптика", "physics.plasm-ph": "Плазма",
-        "physics.gen-ph": "Общая физика", "physics.app-ph": "Прикладная",
-        "custom": "⌨️ Свой код"
+    
+    # Группируем темы для удобства
+    categories = {
+        # Физика (arXiv)
+        "physics.optics": "🔭 Оптика",
+        "physics.plasm-ph": "⚛️ Плазма",
+        "physics.app-ph": "🛠 Прикладная физ.",
+        "physics.gen-ph": "📚 Общая физика",
+        "physics.bio-ph": "🧬 Биофизика",
+        "quant-ph": "🔮 Квантовая физ.",
+        "astro-ph": "🌌 Астрофизика",
+        
+        # Другие науки (Semantic Scholar / arXiv)
+        "Computer Science": "💻 IT / AI",
+        "Mathematics": "📐 Математика",
+        "Biology": "🌿 Биология",
+        "Medicine": "🏥 Медицина",
+        "Chemistry": "🧪 Химия",
+        
+        "custom": "⌨️ Свой код (arXiv)"
     }
+    
     buttons = [types.InlineKeyboardButton(name, callback_data=f"set_topic_{code}") 
-               for code, name in physics_cats.items()]
+               for code, name in categories.items()]
     markup.add(*buttons)
     return markup
 
