@@ -209,17 +209,21 @@ def keep_alive():
     t.daemon = True
     t.start()
 
+# 1. Функция для запуска сервера (должна быть БЕЗ отступов от края)
+def run():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+# 2. Главный блок запуска (тоже БЕЗ отступов от края)
 if __name__ == "__main__":
-    # 1. Сначала запускаем Flask в фоновом потоке
-    server_thread = Thread(target=run) # или run_web, проверь название функции
+    # Все строки ниже ДОЛЖНЫ иметь отступ в 4 пробела
+    server_thread = Thread(target=run)
     server_thread.daemon = True
     server_thread.start()
     
-    # 2. Небольшая пауза, чтобы сервер успел занять порт
     import time
     time.sleep(2)
     
-    # 3. Чистим старые соединения и запускаем бота
     print("Запуск бота...")
     bot.remove_webhook()
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
