@@ -136,6 +136,24 @@ def callback_inline(call):
     bot.answer_callback_query(call.id, "Готово")
     bot.send_message(call.message.chat.id, "⚙️ Настройки обновлены", reply_markup=main_menu())
 
+@bot.message_handler(func=lambda m: m.text == "🔄 СБРОС")
+def reset_settings(message):
+    global user_settings
+    # Возвращаем настройки к исходному состоянию
+    user_settings = {
+        'topic': 'physics.optics',
+        'keywords': ['laser', 'plasma'],
+        'days': 7,
+        'limit': 5,
+        'source': 'Both'
+    }
+    bot.send_message(
+        message.chat.id, 
+        "⚙️ **Настройки сброшены!**\n\nТеперь поиск будет идти по умолчанию (Оптика, 7 дней).",
+        reply_markup=main_menu(),
+        parse_mode="Markdown"
+    )
+
 # --- REPORT GENERATION ---
 @bot.message_handler(func=lambda m: m.text == "🚀 ПОЛУЧИТЬ ОТЧЕТ")
 def run_report(message):
