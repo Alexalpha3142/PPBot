@@ -9,103 +9,94 @@ from datetime import datetime, timedelta
 from flask import Flask
 from threading import Thread
 
-# --- Инициализация ---
-API_TOKEN = os.environ.get('BOT_TOKEN')
-bot = telebot.TeleBot(API_TOKEN)
+# --- WEB SERVER FOR RENDER ---
 app = Flask('')
 
-# Настройки пользователя по умолчанию
+@app.route('/')
+def home():
+    return "I'm alive!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.daemon = True
+    t.start()
+
+# --- BOT SETUP ---
+API_TOKEN = os.environ.get('BOT_TOKEN')
+bot = telebot.TeleBot(API_TOKEN)
+
 user_settings = {
     'topic': 'physics.optics',
     'keywords': ['laser', 'plasma'],
     'days': 7,
     'limit': 5,
-    'source': 'Both' 
+    'source': 'Both'
 }
 
-# --- Веб-сервер для предотвращения "сна" на Render ---
-@app.route('/')
-def home():
-    return "I am alive!"
-
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port, use_reloader=False)
-
-# --- Главное меню ---
+# --- KEYBOARDS ---
 def main_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    btn_topic = types.KeyboardButton(f"📂 Тема: {user_settings['topic']}")
-    btn_keys = types.KeyboardButton(f"🔑 Ключи: {len(user_settings['keywords'])} шт.")
-    btn_days = types.KeyboardButton(f"📅 Срок: {user_settings['days']} дн.")
-    btn_limit = types.KeyboardButton(f"🔢 Лимит: {user_settings['limit']} ст.")
-    btn_source = types.KeyboardButton(f"📡 База: {user_settings['source']}")
-    btn_report = types.KeyboardButton("🚀 ПОЛУЧИТЬ ОТЧЕТ")
-    btn_reset = types.KeyboardButton("🔄 СБРОС")
-    
-    markup.add(btn_topic, btn_keys)
-    markup.add(btn_days, btn_limit)
-    markup.add(btn_source, btn_report)
-    markup.add(btn_reset)
+    markup.add(
+        types.KeyboardButton(f"📂 Тема: {user_settings['topic']}"),
+        types.KeyboardButton(f"🔑 Ключи: {len(user_settings['keywords'])} шт."),
+        types.KeyboardButton(f"📅 Срок: {user_settings['days']} дн."),
+        types.KeyboardButton(f"🔢 Лимит: {user_settings['limit']} ст."),
+        types.KeyboardButton(f"📡 База: {user_settings['source']}"),
+        types.KeyboardButton("🚀 ПОЛУЧИТЬ ОТЧЕТ"),
+        types.KeyboardButton("🔄 СБРОС")
+    )
     return markup
 
-# --- Инлайновое меню выбора тем ---
 def topic_menu():
     markup = types.InlineKeyboardMarkup(row_width=2)
     physics_cats = {
         "physics.optics": "Оптика", "physics.plasm-ph": "Плазма",
-        "physics.gen-ph": "Общая", "physics.acc-ph": "Ускорители",
-        "physics.ao-ph": "Атмосфера", "physics.app-ph": "Прикладная",
-        "physics.bio-ph": "Биофизика", "physics.chem-ph": "Хим. физика",
-        "physics.flu-dyn": "Гидродинамика", "physics.geo-ph": "Геофизика",
-        "physics.med-ph": "Мед. физика", "physics.soc-ph": "Соц. физика",
+        "physics.gen-ph": "Общая физика", "physics.app-ph": "Прикладная",
         "custom": "⌨️ Свой код"
     }
-    for code, name in physics_cats.items():
-        markup.add(types.InlineKeyboardButton(name, callback_data=f"set_topic_{code}"))
+    buttons = [types.InlineKeyboardButton(name, callback_data=f"set_topic_{code}") 
+               for code, name in physics_cats.items()]
+    markup.add(*buttons)
     return markup
 
-# --- Поиск Semantic Scholar ---
+# --- SEARCH LOGIC ---
 def search_semantic_scholar(query, limit):
-    url = "https://semanticscholar.org"
-    params = {"query": query, "limit": limit, "fields": "title,authors,url,publicationDate,abstract"}
+    url = "https://semanticscholar.org" # Исправлен URL API
+    params = {"query": query, "limit": limit, "fields": "title,authors,url,publicationDate,tldr"}
     try:
         r = requests.get(url, params=params, timeout=10)
         return r.json().get('data', []) if r.status_code == 200 else []
     except:
         return []
 
-# --- Обработчики команд ---
+# --- HANDLERS ---
 @bot.message_handler(commands=['start', 'menu'])
 def send_welcome(message):
-    bot.send_message(message.chat.id, "🔬 **Научный Радар (Физика)**\nНастройте поиск кнопками:", 
+    bot.send_message(message.chat.id, "🔬 **Научный Радар**\nНастройте поиск:", 
                      reply_markup=main_menu(), parse_mode="Markdown")
 
 @bot.message_handler(func=lambda m: "Тема:" in m.text)
 def h_topic(m):
-    bot.send_message(m.chat.id, "Выберите категорию физики:", reply_markup=topic_menu())
+    bot.send_message(m.chat.id, "Выберите категорию:", reply_markup=topic_menu())
 
 @bot.message_handler(func=lambda m: "Срок:" in m.text)
 def h_days_ask(m):
     msg = bot.send_message(m.chat.id, "Введите количество дней (число):")
-    bot.register_next_step_handler(msg, save_days)
-
-def save_days(m):
-    if m.text and m.text.isdigit():
-        user_settings['days'] = int(m.text)
-        bot.send_message(m.chat.id, f"✅ Срок обновлен: {m.text} дн.", reply_markup=main_menu())
-    else:
-        bot.send_message(m.chat.id, "⚠️ Введите число.", reply_markup=main_menu())
+    bot.register_next_step_handler(msg, lambda msg: save_setting(msg, 'days'))
 
 @bot.message_handler(func=lambda m: "Лимит:" in m.text)
 def h_limit_ask(m):
     msg = bot.send_message(m.chat.id, "Сколько статей прислать? (число):")
-    bot.register_next_step_handler(msg, save_limit)
+    bot.register_next_step_handler(msg, lambda msg: save_setting(msg, 'limit'))
 
-def save_limit(m):
+def save_setting(m, key):
     if m.text and m.text.isdigit():
-        user_settings['limit'] = int(m.text)
-        bot.send_message(m.chat.id, f"✅ Лимит обновлен: {m.text} шт.", reply_markup=main_menu())
+        user_settings[key] = int(m.text)
+        bot.send_message(m.chat.id, f"✅ Обновлено: {m.text}", reply_markup=main_menu())
     else:
         bot.send_message(m.chat.id, "⚠️ Введите число.", reply_markup=main_menu())
 
@@ -115,100 +106,70 @@ def ask_keys(m):
     bot.register_next_step_handler(msg, save_keys)
 
 def save_keys(m):
-    if m.text:
-        # Разбиваем по запятой, убираем пробелы по краям, игнорируем пустые строки
-        new_keys =
-    else:
-        new_keys = []
-        
-    user_settings['keywords'] = new_keys
-    bot.send_message(m.chat.id, f"✅ Ключи обновлены ({len(new_keys)} шт.)", reply_markup=main_menu())
-
-@bot.message_handler(func=lambda m: "База:" in m.text)
-def h_source(m):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("arXiv", callback_data="set_src_arXiv"),
-               types.InlineKeyboardButton("Semantic Scholar", callback_data="set_src_Semantic"),
-               types.InlineKeyboardButton("Обе базы (Both)", callback_data="set_src_Both"))
-    bot.send_message(m.chat.id, "Выберите источник:", reply_markup=markup)
-
-@bot.message_handler(func=lambda m: m.text == "🔄 СБРОС")
-def h_reset(m):
-    global user_settings
-    user_settings = {'topic': 'physics.optics', 'keywords': ['laser', 'plasma'], 'days': 7, 'limit': 5, 'source': 'Both'}
-    bot.send_message(m.chat.id, "✅ Настройки сброшены.", reply_markup=main_menu())
+    user_settings['keywords'] = if m.text else []
+    bot.send_message(m.chat.id, "✅ Ключи обновлены", reply_markup=main_menu())
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     if call.data.startswith("set_topic_"):
-        if "custom" in call.data:
-            msg = bot.send_message(call.message.chat.id, "Введите код arXiv (напр. physics.optics):")
-            bot.register_next_step_handler(msg, save_custom_topic)
-        else:
-            user_settings['topic'] = call.data.replace("set_topic_", "")
+        user_settings['topic'] = call.data.replace("set_topic_", "")
     elif call.data.startswith("set_src_"):
         user_settings['source'] = call.data.replace("set_src_", "")
     
     bot.answer_callback_query(call.id, "Готово")
     bot.send_message(call.message.chat.id, "⚙️ Настройки обновлены", reply_markup=main_menu())
-    bot.delete_message(call.message.chat.id, call.message.message_id)
 
-def save_custom_topic(m):
-    user_settings['topic'] = m.text.strip()
-    bot.send_message(m.chat.id, f"✅ Тема установлена: {user_settings['topic']}", reply_markup=main_menu())
-
-# --- Логика генерации отчета ---
+# --- REPORT GENERATION ---
 @bot.message_handler(func=lambda m: m.text == "🚀 ПОЛУЧИТЬ ОТЧЕТ")
 def run_report(message):
     bot.send_message(message.chat.id, f"📡 Ищу в {user_settings['source']}...")
     results = []
-    
-    # Запрос для arXiv
-    arxiv_query = f"cat:{user_settings['topic']}"
-    if user_settings['keywords']:
-        arxiv_query += " AND (" + " OR ".join(user_settings['keywords']) + ")"
-    
-    # Поиск arXiv
+    q_str = f"{user_settings['topic']} " + " ".join(user_settings['keywords'])
+
+    # 1. arXiv
     if user_settings['source'] in ['arXiv', 'Both']:
         try:
-            start_dt = (datetime.now() - timedelta(days=user_settings['days'])).date()
-            s = arxiv.Search(query=arxiv_query, max_results=user_settings['limit']*2, sort_by=arxiv.SortCriterion.SubmittedDate)
+            start_dt = (datetime.now() - timedelta(days=user_settings['days'])).strftime("%Y%m%d%H%M%S")
+            final_q = f"({q_str}) AND submittedDate:[{start_dt} TO {datetime.now().strftime('%Y%m%d%H%M%S')}]"
+            s = arxiv.Search(query=final_q, max_results=user_settings['limit'], sort_by=arxiv.SortCriterion.SubmittedDate)
             for r in arxiv.Client().results(s):
-                if r.published.date() >= start_dt:
-                    results.append({'title': r.title, 'src': 'arXiv', 'link': r.entry_id, 
-                                    'authors': ", ".join([a.name for a in r.authors[:3]]), 'date': r.published.strftime('%Y-%m-%d')})
-                if len(results) >= user_settings['limit']: break
+                results.append({
+                    'title': r.title, 'src': 'arXiv', 'link': r.entry_id,
+                    'authors': ", ".join([a.name for a in r.authors[:3]]),
+                    'date': r.published.strftime('%Y-%m-%d')
+                })
         except: pass
 
-    # Поиск Semantic Scholar
-    if user_settings['source'] in ['Semantic', 'Both'] and len(results) < user_settings['limit']:
-        sem_res = search_semantic_scholar(f"{user_settings['topic']} {' '.join(user_settings['keywords'])}", user_settings['limit'])
+    # 2. Semantic Scholar
+    if user_settings['source'] in ['Semantic', 'Both']:
+        sem_res = search_semantic_scholar(q_str, user_settings['limit'])
         for p in sem_res:
-            results.append({'title': p.get('title'), 'src': 'Semantic', 'link': p.get('url'),
-                            'authors': ", ".join([a['name'] for a in p.get('authors', [])[:3]]), 
-                            'date': p.get('publicationDate', 'N/A')})
+            results.append({
+                'title': p.get('title'), 'src': 'Semantic', 'link': p.get('url'),
+                'authors': ", ".join([a['name'] for a in p.get('authors', [])[:3]]),
+                'date': p.get('publicationDate', 'N/A'),
+                'tldr': p.get('tldr', {}).get('text') if p.get('tldr') else None
+            })
 
     if not results:
-        bot.send_message(message.chat.id, "❌ Ничего не найдено. Попробуйте увеличить срок или изменить ключи.", reply_markup=main_menu())
+        bot.send_message(message.chat.id, "❌ Ничего не найдено.", reply_markup=main_menu())
         return
 
+    # Отправка
     report = "📄 **ОТЧЕТ РАДАРА**\n\n"
     for i in results[:user_settings['limit']]:
-        entry = f"🔹 [{i['src']}] {i['title']}\n👥 {i['authors']}\n📅 {i['date']}\n🔗 {i['link']}\n{'-'*20}\n\n"
+        entry = f"🔹 [{i['src']}] {i['title']}\n👥 {i['authors']}\n"
+        if i.get('tldr'): entry += f"💡 {i['tldr']}\n"
+        entry += f"📅 {i['date']}\n🔗 {i['link']}\n{'-'*20}\n\n"
+        
         if len(report + entry) > 3800:
             bot.send_message(message.chat.id, report, disable_web_page_preview=True, parse_mode="Markdown")
             report = ""
         report += entry
-    bot.send_message(message.chat.id, report, disable_web_page_preview=True, parse_mode="Markdown", reply_markup=main_menu())
-
-# --- Запуск ---
-if __name__ == "__main__":
-    # Сначала запускаем веб-сервер
-    t = Thread(target=run_web)
-    t.daemon = True
-    t.start()
     
-    # Затем запускаем бота
-    bot.remove_webhook()
-    print("Бот запущен...")
-    bot.infinity_polling(timeout=20, long_polling_timeout=10)
+    bot.send_message(message.chat.id, report, disable_web_page_preview=True, reply_markup=main_menu(), parse_mode="Markdown")
+
+if __name__ == "__main__":
+    keep_alive()
+    print("Бот запущен!")
+    bot.infinity_polling()
