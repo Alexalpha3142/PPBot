@@ -201,9 +201,8 @@ def home():
     return "I am alive!"
 
 def run():
-    # Render сам назначит порт через переменную окружения PORT
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
+port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port) # Строго 0.0.0.0
 
 def keep_alive():
     t = Thread(target=run)
@@ -211,8 +210,17 @@ def keep_alive():
     t.start()
 
 if __name__ == "__main__":
-    keep_alive()  # Запускаем Flask в отдельном потоке
-    # Удаляем вебхуки, чтобы избежать конфликтов при перезагрузке
+    # 1. Сначала запускаем Flask в фоновом потоке
+    server_thread = Thread(target=run) # или run_web, проверь название функции
+    server_thread.daemon = True
+    server_thread.start()
+    
+    # 2. Небольшая пауза, чтобы сервер успел занять порт
+    import time
+    time.sleep(2)
+    
+    # 3. Чистим старые соединения и запускаем бота
+    print("Запуск бота...")
     bot.remove_webhook()
-    print("Бот запущен...")
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
+
