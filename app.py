@@ -193,9 +193,6 @@ def run_report(message):
     bot.send_message(message.chat.id, report, disable_web_page_preview=True, reply_markup=main_menu())
 
 if __name__ == "__main__":
-    bot.infinity_polling()
-
-if __name__ == "__main__":
     # Запускаем веб-сервер в отдельном потоке
     threading.Thread(target=run_web).start()
     
