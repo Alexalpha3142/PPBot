@@ -8,6 +8,7 @@ import threading
 import os
 from flask import Flask
 from threading import Thread
+import os
 
 # Создаем маленькое веб-приложение
 app = Flask('')
@@ -22,10 +23,7 @@ def run_web():
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
 
-
-# --- Данные бота ---
-# Вставь свой токен от BotFather
-API_TOKEN = '7524262469:AAFVQB2I4-05tj-1l-0YXvUYY2un-Xl5oHs'
+API_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(API_TOKEN)
 
 # Настройки пользователя по умолчанию
