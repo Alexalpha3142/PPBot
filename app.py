@@ -209,13 +209,15 @@ def keep_alive():
     t.daemon = True
     t.start()
 
+# --- СЕКЦИЯ ЗАПУСКА ДЛЯ RENDER ---
+
 def run():
     # Эта строка должна иметь отступ 4 пробела!
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
 if __name__ == "__main__":
-    # Эти строки должны иметь отступ 4 пробела!
+    # Все строки ниже ДОЛЖНЫ иметь отступ в 4 пробела!
     server_thread = Thread(target=run)
     server_thread.daemon = True
     server_thread.start()
@@ -227,4 +229,3 @@ if __name__ == "__main__":
     # Очищаем старые сессии, чтобы не было ошибки 409 Conflict
     bot.remove_webhook()
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
-
