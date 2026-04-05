@@ -5,7 +5,9 @@ import requests
 from telebot import types
 from datetime import datetime, timedelta
 import threading
+import os
 from flask import Flask
+from threading import Thread
 
 # Создаем маленькое веб-приложение
 app = Flask('')
@@ -192,15 +194,25 @@ def run_report(message):
         report += entry
     bot.send_message(message.chat.id, report, disable_web_page_preview=True, reply_markup=main_menu())
 
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "I am alive!"
+
+def run():
+    # Render сам назначит порт через переменную окружения PORT
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.daemon = True
+    t.start()
+
 if __name__ == "__main__":
-    # Запускаем веб-сервер в отдельном потоке
-    threading.Thread(target=run_web).start()
-    
-    # Запускаем бота
-    import time
-    while True:
-        try:
-            bot.infinity_polling(timeout=10, long_polling_timeout=5)
-        except Exception as e:
-            print(f"Ошибка: {e}")
-            time.sleep(5)
+    keep_alive()  # Запускаем Flask в отдельном потоке
+    # Удаляем вебхуки, чтобы избежать конфликтов при перезагрузке
+    bot.remove_webhook()
+    print("Бот запущен...")
+    bot.infinity_polling(timeout=20, long_polling_timeout=10)
