@@ -1,0 +1,17 @@
+name: Python Check
+on: [push] # Проверять при каждом сохранении
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        pip install pyTelegramBotAPI arxiv requests
+    - name: Syntax check
+      run: |
+        python -m py_compile app.py # Просто проверяет код на ошибки, не запуская бота
