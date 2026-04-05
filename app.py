@@ -115,7 +115,12 @@ def ask_keys(m):
     bot.register_next_step_handler(msg, save_keys)
 
 def save_keys(m):
-    new_keys = if m.text else []
+    if m.text:
+        # Разбиваем по запятой, убираем пробелы по краям, игнорируем пустые строки
+        new_keys =
+    else:
+        new_keys = []
+        
     user_settings['keywords'] = new_keys
     bot.send_message(m.chat.id, f"✅ Ключи обновлены ({len(new_keys)} шт.)", reply_markup=main_menu())
 
