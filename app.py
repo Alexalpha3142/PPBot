@@ -4,6 +4,22 @@ import telebot
 import requests
 from telebot import types
 from datetime import datetime, timedelta
+import threading
+from flask import Flask
+
+# Создаем маленькое веб-приложение
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "I'm alive!"
+
+def run_web():
+    # Render передает порт в переменной окружения PORT
+    import os
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+
 
 # --- Данные бота ---
 # Вставь свой токен от BotFather
@@ -178,3 +194,16 @@ def run_report(message):
 
 if __name__ == "__main__":
     bot.infinity_polling()
+
+if __name__ == "__main__":
+    # Запускаем веб-сервер в отдельном потоке
+    threading.Thread(target=run_web).start()
+    
+    # Запускаем бота
+    import time
+    while True:
+        try:
+            bot.infinity_polling(timeout=10, long_polling_timeout=5)
+        except Exception as e:
+            print(f"Ошибка: {e}")
+            time.sleep(5)
